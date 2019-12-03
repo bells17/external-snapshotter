@@ -33,7 +33,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -360,9 +360,16 @@ func TestGetSnapshotStatus(t *testing.T) {
 		},
 	}
 
+	secret := map[string]string{"foo": "bar"}
+	secretRequest := &csi.ListSnapshotsRequest{
+		SnapshotId: defaultID,
+		Secrets:    secret,
+	}
+
 	tests := []struct {
 		name                   string
 		snapshotID             string
+		secret                 map[string]string
 		listSnapshotsSupported bool
 		input                  *csi.ListSnapshotsRequest
 		output                 *csi.ListSnapshotsResponse
@@ -377,6 +384,18 @@ func TestGetSnapshotStatus(t *testing.T) {
 			snapshotID:             defaultID,
 			listSnapshotsSupported: true,
 			input:                  defaultRequest,
+			output:                 defaultResponse,
+			expectError:            false,
+			expectReady:            true,
+			expectCreateAt:         createTime,
+			expectSize:             size,
+		},
+		{
+			name:                   "secret",
+			snapshotID:             defaultID,
+			secret:                 secret,
+			listSnapshotsSupported: true,
+			input:                  secretRequest,
 			output:                 defaultResponse,
 			expectError:            false,
 			expectReady:            true,
@@ -453,7 +472,7 @@ func TestGetSnapshotStatus(t *testing.T) {
 		}
 
 		s := NewSnapshotter(csiConn)
-		ready, createTime, size, err := s.GetSnapshotStatus(context.Background(), test.snapshotID)
+		ready, createTime, size, err := s.GetSnapshotStatus(context.Background(), test.snapshotID, test.secret)
 		if test.expectError && err == nil {
 			t.Errorf("test %q: Expected error, got none", test.name)
 		}

@@ -23,6 +23,7 @@ import (
 
 func TestSyncContent(t *testing.T) {
 	var tests []controllerTest
+	var listSecret map[string]string
 
 	tests = append(tests, controllerTest{
 		name:             "Basic content create ready to use",
@@ -38,7 +39,7 @@ func TestSyncContent(t *testing.T) {
 				readyToUse:   true,
 			},
 		},
-		expectedListCalls: []listCall{{"sid1-1", true, time.Now(), 1, nil}},
+		expectedListCalls: []listCall{{"sid1-1", true, time.Now(), 1, listSecret, nil}},
 		errors:            noerrors,
 		test:              testSyncContent,
 	})

@@ -25,7 +25,7 @@ import (
 
 	crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1beta1"
 	"github.com/kubernetes-csi/external-snapshotter/pkg/utils"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -135,7 +135,7 @@ var snapshotClasses = []*crdv1.VolumeSnapshotClass{
 // 2. Call the syncContent *once*.
 // 3. Compare resulting contents with expected contents.
 func TestDeleteSync(t *testing.T) {
-
+	var listSecret map[string]string
 	tests := []controllerTest{
 		{
 			name:             "1-1 - content non-nil DeletionTimestamp with delete policy will delete snapshot",
@@ -156,7 +156,7 @@ func TestDeleteSync(t *testing.T) {
 					readyToUse:   true,
 				},
 			},
-			expectedListCalls:   []listCall{{"sid1-1", true, time.Now(), 1, nil}},
+			expectedListCalls:   []listCall{{"sid1-1", true, time.Now(), 1, listSecret, nil}},
 			expectedDeleteCalls: []deleteCall{{"sid1-1", nil, nil}},
 			test:                testSyncContent,
 		},
@@ -178,7 +178,7 @@ func TestDeleteSync(t *testing.T) {
 					readyToUse:   true,
 				},
 			},
-			expectedListCalls:   []listCall{{"sid1-2", true, time.Now(), 1, nil}},
+			expectedListCalls:   []listCall{{"sid1-2", true, time.Now(), 1, listSecret, nil}},
 			expectedDeleteCalls: []deleteCall{{"sid1-2", nil, nil}},
 			test:                testSyncContent,
 		},
@@ -201,7 +201,7 @@ func TestDeleteSync(t *testing.T) {
 			},
 			expectedDeleteCalls: []deleteCall{{"sid1-3", nil, fmt.Errorf("mock csi driver delete error")}},
 			expectedEvents:      []string{"Warning SnapshotDeleteError"},
-			expectedListCalls:   []listCall{{"sid1-3", true, time.Now(), 1, nil}},
+			expectedListCalls:   []listCall{{"sid1-3", true, time.Now(), 1, listSecret, nil}},
 			test:                testSyncContent,
 		},
 		/*{
@@ -218,7 +218,7 @@ func TestDeleteSync(t *testing.T) {
 				},
 			},
 			//expectedDeleteCalls: []deleteCall{{"sid1-4", nil, nil}},
-			expectedListCalls: []listCall{{"sid1-4", true, time.Now(), 1, nil}},
+			expectedListCalls: []listCall{{"sid1-4", true, time.Now(), 1, listSecret, nil}},
 			expectedEvents:    []string{"Warning SnapshotContentCheckandUpdateFailed Failed to check and update snapshot content: Create failed"},
 			test:              testSyncContent,
 		},*/
@@ -240,7 +240,7 @@ func TestDeleteSync(t *testing.T) {
 			initialSecrets:      []*v1.Secret{emptySecret()},
 			expectedEvents:      noevents,
 			errors:              noerrors,
-			expectedDeleteCalls: []deleteCall{{"sid1-2", map[string]string{}, nil}},
+			expectedDeleteCalls: []deleteCall{{"sid1-2", listSecret, nil}},
 			test:                testSyncContent,
 		},*/
 		/*{
@@ -264,7 +264,7 @@ func TestDeleteSync(t *testing.T) {
 					readyToUse:   true,
 				},
 			},
-			expectedListCalls:   []listCall{{"sid1-1", true, time.Now(), 1, nil}},
+			expectedListCalls:   []listCall{{"sid1-1", true, time.Now(), 1, listSecret, nil}},
 			expectedDeleteCalls: []deleteCall{{"sid1-1", nil, nil}},
 			test:                testSyncContent,
 		},*/
@@ -288,7 +288,7 @@ func TestDeleteSync(t *testing.T) {
 					creationTime: timeNow,
 				},
 			},
-			expectedListCalls:   []listCall{{"sid1-3", true, time.Now(), 1, nil}},
+			expectedListCalls:   []listCall{{"sid1-3", true, time.Now(), 1, listSecret, nil}},
 			expectedDeleteCalls: []deleteCall{{"sid1-3", map[string]string{"param1": "value1"}, nil}},
 			test:                testSyncContent,
 		},
@@ -305,7 +305,7 @@ func TestDeleteSync(t *testing.T) {
 			name:                "1-5 - csi driver delete snapshot returns error",
 			initialContents:     newContentArrayWithDeletionTimestamp("content1-5", "sid1-5", "snap1-5", "sid1-5", validSecretClass, "", "", deletionPolicy, nil, &defaultSize, true, &timeNowMetav1),
 			expectedContents:    newContentArrayWithDeletionTimestamp("content1-5", "sid1-5", "snap1-5", "sid1-5", validSecretClass, "", "", deletionPolicy, nil, &defaultSize, false, &timeNowMetav1),
-			expectedListCalls:   []listCall{{"sid1-5", true, time.Now(), 1000, nil}},
+			expectedListCalls:   []listCall{{"sid1-5", true, time.Now(), 1000, listSecret, nil}},
 			expectedDeleteCalls: []deleteCall{{"sid1-5", nil, errors.New("mock csi driver delete error")}},
 			expectedEvents:      []string{"Warning SnapshotDeleteError"},
 			errors:              noerrors,
@@ -316,7 +316,7 @@ func TestDeleteSync(t *testing.T) {
 			initialContents: newContentArray("content1-6", "sid1-6", "snap1-6", "sid1-6", classGold, "", "", deletionPolicy, nil, nil, true),
 			//expectedContents:    newContentArray("content1-6", "sid1-6", "snap1-6", "sid1-6", classGold, "", "", deletionPolicy, nil, nil, true),
 			expectedDeleteCalls: []deleteCall{{"sid1-6", map[string]string{"foo": "bar"}, nil}},
-			expectedListCalls:   []listCall{{"sid1-6", false, time.Now(), 0, nil}},
+			expectedListCalls:   []listCall{{"sid1-6", false, time.Now(), 0, listSecret, nil}},
 			expectedEvents:      []string{"Warning SnapshotContentObjectDeleteError"},
 			errors: []reactorError{
 				// Inject error to the first client.VolumesnapshotV1beta1().VolumeSnapshotContents().Delete call.
@@ -343,7 +343,7 @@ func TestDeleteSync(t *testing.T) {
 			name:                "1-8 - content is deleted before deleting",
 			initialContents:     newContentArray("content1-8", "sid1-8", "snap1-8", "sid1-8", classGold, "", "", deletionPolicy, nil, nil, true),
 			expectedContents:    nocontents,
-			expectedListCalls:   []listCall{{"sid1-8", false, time.Now(), 0, nil}},
+			expectedListCalls:   []listCall{{"sid1-8", false, time.Now(), 0, listSecret, nil}},
 			expectedDeleteCalls: []deleteCall{{"sid1-8", map[string]string{"foo": "bar"}, nil}},
 			expectedEvents:      noevents,
 			errors:              noerrors,
@@ -359,7 +359,7 @@ func TestDeleteSync(t *testing.T) {
 			expectedContents:  newContentArrayWithDeletionTimestamp("content1-9", "snapuid1-9", "snap1-9", "sid1-9", classGold, "", "snap1-9-volumehandle", retainPolicy, nil, nil, false, &timeNowMetav1),
 			initialContents:   newContentArrayWithDeletionTimestamp("content1-9", "snapuid1-9", "snap1-9", "sid1-9", classGold, "", "snap1-9-volumehandle", retainPolicy, nil, nil, false, &timeNowMetav1),
 			expectedEvents:    noevents,
-			expectedListCalls: []listCall{{"sid1-9", true, time.Now(), 0, nil}},
+			expectedListCalls: []listCall{{"sid1-9", true, time.Now(), 0, listSecret, nil}},
 			initialSecrets:    []*v1.Secret{secret()},
 			errors:            noerrors,
 			test:              testSyncContent,
@@ -393,7 +393,7 @@ func TestDeleteSync(t *testing.T) {
 					readyToUse:   true,
 				},
 			},
-			expectedListCalls: []listCall{{"sid1-11", true, time.Now(), 1000, nil}},
+			expectedListCalls: []listCall{{"sid1-11", true, time.Now(), 1000, listSecret, nil}},
 			initialSecrets:    []*v1.Secret{secret()},
 			errors:            noerrors,
 			test:              testSyncContent,
@@ -403,7 +403,7 @@ func TestDeleteSync(t *testing.T) {
 			initialContents:   newContentArrayWithReadyToUse("content1-12", "sid1-12", "snap1-11", "sid1-11", validSecretClass, "", "", retainPolicy, nil, &defaultSize, &True, true),
 			expectedContents:  newContentArrayWithReadyToUse("content1-12", "sid1-12", "snap1-11", "sid1-11", validSecretClass, "", "", retainPolicy, nil, &defaultSize, &True, true),
 			expectedEvents:    noevents,
-			expectedListCalls: []listCall{{"sid1-11", true, time.Now(), 0, nil}},
+			expectedListCalls: []listCall{{"sid1-11", true, time.Now(), 0, listSecret, nil}},
 			errors:            noerrors,
 			test:              testSyncContent,
 		},
@@ -429,7 +429,7 @@ func TestDeleteSync(t *testing.T) {
 			initialContents:     newContentArrayWithDeletionTimestamp("content1-16", "sid1-16", "snap1-16", "sid1-16", emptySecretClass, "", "", deletePolicy, nil, &defaultSize, true, &timeNowMetav1),
 			expectedContents:    newContentArrayWithDeletionTimestamp("content1-16", "sid1-16", "snap1-16", "sid1-16", emptySecretClass, "", "", deletePolicy, nil, &defaultSize, false, &timeNowMetav1),
 			expectedEvents:      noevents,
-			expectedListCalls:   []listCall{{"sid1-16", true, time.Now(), 0, nil}},
+			expectedListCalls:   []listCall{{"sid1-16", true, time.Now(), 0, listSecret, nil}},
 			errors:              noerrors,
 			initialSecrets:      []*v1.Secret{}, // secret does not exist
 			expectedDeleteCalls: []deleteCall{{"sid1-16", nil, nil}},

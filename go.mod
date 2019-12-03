@@ -3,7 +3,7 @@ module github.com/kubernetes-csi/external-snapshotter
 go 1.12
 
 require (
-	github.com/container-storage-interface/spec v1.1.0
+	github.com/container-storage-interface/spec v1.2.0
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
 	github.com/golang/mock v1.2.0
 	github.com/golang/protobuf v1.3.1
